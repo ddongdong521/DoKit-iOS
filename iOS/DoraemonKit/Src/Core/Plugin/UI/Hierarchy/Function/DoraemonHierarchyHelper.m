@@ -24,28 +24,44 @@ static DoraemonHierarchyHelper *_instance = nil;
 }
 
 - (NSArray <UIWindow *>*)allWindowsIgnorePrefix:(NSString *_Nullable)prefix {
+    NSMutableArray<UIWindow *> *results = [NSMutableArray array];
     BOOL includeInternalWindows = YES;
     BOOL onlyVisibleWindows = NO;
-    
     SEL allWindowsSelector = NSSelectorFromString(@"allWindowsIncludingInternalWindows:onlyVisibleWindows:");
-    
     NSMethodSignature *methodSignature = [[UIWindow class] methodSignatureForSelector:allWindowsSelector];
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSignature];
+    // 部分系统版本已移除该私有类方法；signature 为空时继续 invoke 会崩溃，需走 UIScene 枚举兜底
+    if (methodSignature) {
+        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSignature];
+        invocation.target = [UIWindow class];
+        invocation.selector = allWindowsSelector;
+        [invocation setArgument:&includeInternalWindows atIndex:2];
+        [invocation setArgument:&onlyVisibleWindows atIndex:3];
+        [invocation invoke];
+        __unsafe_unretained NSArray<UIWindow *> *windows = nil;
+        [invocation getReturnValue:&windows];
+        if ([windows isKindOfClass:[NSArray class]] && windows.count) {
+            [results addObjectsFromArray:windows];
+        }
+    }
+    if (results.count == 0) {
+        if (@available(iOS 13.0, *)) {
+            for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+                if (![scene isKindOfClass:[UIWindowScene class]]) {
+                    continue;
+                }
+                [results addObjectsFromArray:((UIWindowScene *)scene).windows];
+            }
+        }
+        for (UIWindow *w in [UIApplication sharedApplication].windows) {
+            if (![results containsObject:w]) {
+                [results addObject:w];
+            }
+        }
+    }
     
-    invocation.target = [UIWindow class];
-    invocation.selector = allWindowsSelector;
-    [invocation setArgument:&includeInternalWindows atIndex:2];
-    [invocation setArgument:&onlyVisibleWindows atIndex:3];
-    [invocation invoke];
-    
-    __unsafe_unretained NSArray<UIWindow *> *windows = nil;
-    [invocation getReturnValue:&windows];
-    
-    windows = [windows sortedArrayUsingComparator:^NSComparisonResult(UIWindow * obj1, UIWindow * obj2) {
+    [results sortUsingComparator:^NSComparisonResult(UIWindow * obj1, UIWindow * obj2) {
         return obj1.windowLevel > obj2.windowLevel;
     }];
-    
-    NSMutableArray *results = [[NSMutableArray alloc] initWithArray:windows];
     NSMutableArray *removeResults = [[NSMutableArray alloc] init];
     if ([prefix length] > 0) {
         for (UIWindow *window in results) {

@@ -100,7 +100,8 @@
 }
 
 - (CGRect)frameInLocalForView:(UIView *)view {
-    UIWindow *window = [DoraemonUtil getKeyWindow];
+    // 选中视图在业务侧 window 内；用 keyWindow（常为 DoKit 面板）做坐标系会错位
+    UIWindow *window = view.window ?: [DoraemonUtil hostKeyWindowForAppOverlay];
     CGRect rect = [view convertRect:view.bounds toView:window];
     rect = [self.view convertRect:rect fromView:window];
     return rect;

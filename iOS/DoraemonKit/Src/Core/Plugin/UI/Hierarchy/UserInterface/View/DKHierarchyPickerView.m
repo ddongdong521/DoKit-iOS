@@ -1,5 +1,6 @@
 #import <DoKit/DKHierarchyPickerView.h>
 #import <DoKit/DoraemonHierarchyHelper.h>
+#import "DoraemonUtil.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -24,11 +25,8 @@ NS_ASSUME_NONNULL_END
 
 - (nullable NSArray<UIView *> *)viewForSelectionAtPoint:(CGPoint)tapPointInWindow {
     // Select in the window that would handle the touch, but don't just use the result of hitTest:withEvent: so we can still select views with interaction disabled.
-    // Default to the the application's key window if none of the windows want the touch.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    UIWindow *windowForSelection = [[UIApplication sharedApplication] keyWindow];
-#pragma clang diagnostic pop
+    // 默认命中业务宿主 window，避免面板打开时落到 DoKit 工具窗上
+    UIWindow *windowForSelection = [DoraemonUtil hostKeyWindowForAppOverlay];
     for (UIWindow *window in [[[DoraemonHierarchyHelper shared] allWindowsIgnorePrefix:@"Doraemon"] reverseObjectEnumerator]) {
         if ([window hitTest:tapPointInWindow withEvent:nil]) {
             windowForSelection = window;

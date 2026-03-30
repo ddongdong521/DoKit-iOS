@@ -296,25 +296,164 @@
 }
 
 + (UIWindow *)getKeyWindow{
-    UIWindow *keyWindow = nil;
-    if ([[UIApplication sharedApplication].delegate respondsToSelector:@selector(window)]) {
-        keyWindow = [[UIApplication sharedApplication].delegate window];
-    }else{
-        NSArray *windows = [UIApplication sharedApplication].windows;
-        for (UIWindow *window in windows) {
-            if (!window.hidden) {
-                keyWindow = window;
-                break;
+    // UIScene：delegate 常实现 -window 但返回 nil，旧逻辑误判为已命中而不遍历 windows，导致取不到 keyWindow
+    if (@available(iOS 13.0, *)) {
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if (![scene isKindOfClass:[UIWindowScene class]]) {
+                continue;
+            }
+            UIWindowScene *ws = (UIWindowScene *)scene;
+            if (ws.activationState != UISceneActivationStateForegroundActive) {
+                continue;
+            }
+            for (UIWindow *w in ws.windows) {
+                if (w.isKeyWindow) {
+                    return w;
+                }
+            }
+            for (UIWindow *w in ws.windows) {
+                if (!w.hidden) {
+                    return w;
+                }
             }
         }
     }
-    return keyWindow;
+    UIWindow *keyWindow = nil;
+    if ([[UIApplication sharedApplication].delegate respondsToSelector:@selector(window)]) {
+        keyWindow = [[UIApplication sharedApplication].delegate window];
+    }
+    if (keyWindow) {
+        return keyWindow;
+    }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    keyWindow = [UIApplication sharedApplication].keyWindow;
+#pragma clang diagnostic pop
+    if (keyWindow) {
+        return keyWindow;
+    }
+    NSArray *windows = [UIApplication sharedApplication].windows;
+    for (UIWindow *window in windows) {
+        if (!window.hidden) {
+            return window;
+        }
+    }
+    return nil;
+}
+
++ (UIWindow *)mainWindowToRestoreKeyWindow{
+    if (@available(iOS 13.0, *)) {
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if (![scene isKindOfClass:[UIWindowScene class]]) {
+                continue;
+            }
+            UIWindowScene *ws = (UIWindowScene *)scene;
+            if (ws.activationState != UISceneActivationStateForegroundActive) {
+                continue;
+            }
+            for (UIWindow *w in ws.windows) {
+                if (w.windowLevel == UIWindowLevelNormal && !w.isHidden) {
+                    return w;
+                }
+            }
+            for (UIWindow *w in ws.windows) {
+                if (!w.isHidden) {
+                    return w;
+                }
+            }
+        }
+    }
+    if ([[UIApplication sharedApplication].delegate respondsToSelector:@selector(window)]) {
+        UIWindow *w = [[UIApplication sharedApplication].delegate window];
+        if (w) {
+            return w;
+        }
+    }
+    for (UIWindow *w in [UIApplication sharedApplication].windows) {
+        if (w.windowLevel == UIWindowLevelNormal && !w.isHidden) {
+            return w;
+        }
+    }
+    return [UIApplication sharedApplication].windows.firstObject;
+}
+
++ (BOOL)doraemon_isDedicatedKitWindow:(UIWindow *)window {
+    if (!window) {
+        return NO;
+    }
+    NSString *name = NSStringFromClass([window class]);
+    return [name hasPrefix:@"Doraemon"];
+}
+
++ (UIWindow *)doraemon_firstHostLikeWindowInWindowScene:(UIWindowScene *)ws {
+    NSMutableArray<UIWindow *> *candidates = [NSMutableArray array];
+    for (UIWindow *w in ws.windows) {
+        if ([self doraemon_isDedicatedKitWindow:w] || w.isHidden) {
+            continue;
+        }
+        [candidates addObject:w];
+    }
+    for (UIWindow *w in candidates) {
+        if (w.windowLevel == UIWindowLevelNormal) {
+            return w;
+        }
+    }
+    for (UIWindow *w in candidates) {
+        if (w.windowLevel < UIWindowLevelStatusBar) {
+            return w;
+        }
+    }
+    return candidates.firstObject;
+}
+
++ (UIWindow *)hostKeyWindowForAppOverlay {
+    if (@available(iOS 13.0, *)) {
+        NSArray<NSNumber *> *states = @[@(UISceneActivationStateForegroundActive), @(UISceneActivationStateForegroundInactive)];
+        for (NSNumber *stNum in states) {
+            UISceneActivationState st = (UISceneActivationState)stNum.unsignedIntegerValue;
+            for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+                if (![scene isKindOfClass:[UIWindowScene class]]) {
+                    continue;
+                }
+                if (scene.activationState != st) {
+                    continue;
+                }
+                UIWindow *w = [self doraemon_firstHostLikeWindowInWindowScene:(UIWindowScene *)scene];
+                if (w) {
+                    return w;
+                }
+            }
+        }
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if (![scene isKindOfClass:[UIWindowScene class]]) {
+                continue;
+            }
+            UIWindow *w = [self doraemon_firstHostLikeWindowInWindowScene:(UIWindowScene *)scene];
+            if (w) {
+                return w;
+            }
+        }
+    }
+    for (UIWindow *w in [UIApplication sharedApplication].windows) {
+        if (![self doraemon_isDedicatedKitWindow:w] && !w.isHidden && w.windowLevel == UIWindowLevelNormal) {
+            return w;
+        }
+    }
+    for (UIWindow *w in [UIApplication sharedApplication].windows) {
+        if (![self doraemon_isDedicatedKitWindow:w] && !w.isHidden) {
+            return w;
+        }
+    }
+    return [self mainWindowToRestoreKeyWindow];
 }
 
 + (NSArray *)getWebViews {
     NSMutableArray *webViews = [NSMutableArray array];
-    // 查找当前window中的所有webView
-    [webViews addObjectsFromArray:[[self getKeyWindow] doraemon_findViewsForClass:WKWebView.class]];
+    // 查找业务宿主 window 中的 WebView，避免取到 DoKit 面板内的占位
+    UIWindow *host = [self hostKeyWindowForAppOverlay];
+    if (host) {
+        [webViews addObjectsFromArray:[host doraemon_findViewsForClass:WKWebView.class]];
+    }
     return webViews;
 }
 

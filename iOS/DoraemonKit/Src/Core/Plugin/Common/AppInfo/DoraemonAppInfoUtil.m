@@ -119,7 +119,7 @@
     }
     
     if (@available(iOS 11.0, *)) {
-        UIWindow *mainWindow = [DoraemonUtil getKeyWindow];
+        UIWindow *mainWindow = [DoraemonUtil hostKeyWindowForAppOverlay];
         if (mainWindow.safeAreaInsets.bottom > 0.0) {
             iPhoneXSeries = YES;
         }

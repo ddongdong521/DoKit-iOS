@@ -55,6 +55,12 @@
 
 + (UIWindow *)getKeyWindow;
 
+/// 组件检查/对齐/取色等浮层须挂在业务宿主 window；当前 keyWindow 常为 DoKit 工具窗时，getKeyWindow 会得到错误目标。
++ (nullable UIWindow *)hostKeyWindowForAppOverlay;
+
+/// UIScene 下 AppDelegate.window 常为 nil；离开 DoKit 浮动面板时需把 keyWindow 交还「主应用 window」（优先 UIWindowLevelNormal）
++ (nullable UIWindow *)mainWindowToRestoreKeyWindow;
+
 + (NSArray *)getWebViews;
 
 + (void)openPlugin:(UIViewController *)vc __attribute__((deprecated("此方法已弃用,请使用[DoraemonHomeWindow openPlugin:vc];")));

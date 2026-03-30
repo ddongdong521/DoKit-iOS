@@ -38,8 +38,13 @@
 
 - (void)doraemonMetricsRecursiveEnable:(BOOL)enable
 {
-    // 状态栏不显示元素边框
-    UIWindow *statusBarWindow = [[UIApplication sharedApplication] valueForKey:@"_statusBarWindow"];
+    // iOS 13+ 通过 KVC 取 _statusBarWindow 会触发 UIKit 断言崩溃；本方法在布局边框开启时随 layoutSubviews 全树调用，必现。
+    // 旧系统保留「跳过状态栏子树」；新系统不再取私有 window，状态栏上可能仍显示调试边框（仅 Debug 工具可接受）。
+    UIWindow *statusBarWindow = nil;
+    if (@available(iOS 13.0, *)) {
+    } else {
+        statusBarWindow = [[UIApplication sharedApplication] valueForKey:@"_statusBarWindow"];
+    }
     if (statusBarWindow && [self isDescendantOfView:statusBarWindow]) {
         return;
     }

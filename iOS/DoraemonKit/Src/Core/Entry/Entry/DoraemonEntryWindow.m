@@ -80,10 +80,37 @@
     if (self) {
         #if defined(__IPHONE_13_0) && (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_0)
             if (@available(iOS 13.0, *)) {
-                UIScene *scene = [[UIApplication sharedApplication].connectedScenes anyObject];
-                if (scene) {
-                    self.windowScene = (UIWindowScene *)scene;
+                // install 常在 Scene 连接前后触发：仅认 ForegroundActive 时，此时尚未激活 → windowScene 为空，入口窗整窗不显示。
+                // 优先级：前台激活 > 前台未激活(常见启动瞬间) > 任意 UIWindowScene；仍避免无脑 anyObject 绑到后台 CarPlay 等 scene。
+                NSArray<NSNumber *> *preferredStates = @[
+                    @(UISceneActivationStateForegroundActive),
+                    @(UISceneActivationStateForegroundInactive),
+                ];
+                UIWindowScene *picked = nil;
+                for (NSNumber *stateNum in preferredStates) {
+                    UISceneActivationState want = (UISceneActivationState)stateNum.unsignedIntegerValue;
+                    for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+                        if (![scene isKindOfClass:[UIWindowScene class]]) {
+                            continue;
+                        }
+                        if (scene.activationState == want) {
+                            picked = (UIWindowScene *)scene;
+                            break;
+                        }
+                    }
+                    if (picked) {
+                        break;
+                    }
                 }
+                if (!picked) {
+                    for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+                        if ([scene isKindOfClass:[UIWindowScene class]]) {
+                            picked = (UIWindowScene *)scene;
+                            break;
+                        }
+                    }
+                }
+                self.windowScene = picked;
             }
         #endif
         self.backgroundColor = [UIColor clearColor];

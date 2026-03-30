@@ -10,6 +10,7 @@
 #import "DoraemonNavBarItemModel.h"
 #import "UIImage+Doraemon.h"
 #import "DoraemonHomeWindow.h"
+#import "DoraemonUtil.h"
 #import "UIView+Doraemon.h"
 #import "DoraemonDefine.h"
 
@@ -64,13 +65,20 @@
 
 - (void)viewWillDisappear:(BOOL)animated{
     [super viewWillDisappear:animated];
-    //输入框聚焦的时候，会把当前window设置为keyWindow，我们在当页面消失的时候，判断一下，把keyWindow交还给[[UIApplication sharedApplication].delegate window]
+    // 输入框聚焦时 keyWindow 可能落在 DoKit 窗口上；页面消失应交还主应用。UIScene 下 delegate.window 常为 nil，不能直接依赖。
+    UIWindow *appWindow = nil;
     if ([[UIApplication sharedApplication].delegate respondsToSelector:@selector(window)]) {
-        UIWindow *appWindow = [[UIApplication sharedApplication].delegate window];
-        UIWindow *keyWindow = [UIApplication sharedApplication].keyWindow;
-        if (appWindow != keyWindow) {
-            [appWindow makeKeyWindow];
-        }
+        appWindow = [[UIApplication sharedApplication].delegate window];
+    }
+    if (!appWindow) {
+        appWindow = [DoraemonUtil mainWindowToRestoreKeyWindow];
+    }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    UIWindow *keyWindow = [UIApplication sharedApplication].keyWindow;
+#pragma clang diagnostic pop
+    if (appWindow && appWindow != keyWindow) {
+        [appWindow makeKeyWindow];
     }
 }
 

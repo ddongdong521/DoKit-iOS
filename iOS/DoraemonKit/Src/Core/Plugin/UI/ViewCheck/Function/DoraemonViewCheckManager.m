@@ -31,20 +31,20 @@
     self = [super init];
     if (self) {
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(closePlugin:) name:DoraemonClosePluginNotification object:nil];
-        [[DoraemonUtil getKeyWindow] addObserver:self forKeyPath:@"rootViewController" options:NSKeyValueObservingOptionNew context:nil];
+        [[DoraemonUtil hostKeyWindowForAppOverlay] addObserver:self forKeyPath:@"rootViewController" options:NSKeyValueObservingOptionNew context:nil];
     }
     return self;
 }
 
 - (void)dealloc {
-    [[DoraemonUtil getKeyWindow] removeObserver:self forKeyPath:@"rootViewController"];
+    [[DoraemonUtil hostKeyWindowForAppOverlay] removeObserver:self forKeyPath:@"rootViewController"];
 }
 
 - (void)show{
     if (!_viewCheckView) {
         _viewCheckView = [[DoraemonViewCheckView alloc] init];
         _viewCheckView.hidden = YES;
-        [[DoraemonUtil getKeyWindow] addSubview:_viewCheckView];
+        [[DoraemonUtil hostKeyWindowForAppOverlay] addSubview:_viewCheckView];
     }
     [_viewCheckView show];
 }
@@ -58,7 +58,7 @@
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
-    [[DoraemonUtil getKeyWindow] bringSubviewToFront:self.viewCheckView];
+    [[DoraemonUtil hostKeyWindowForAppOverlay] bringSubviewToFront:self.viewCheckView];
 }
 
 @end

@@ -34,8 +34,22 @@
 - (void)setEnable:(BOOL)enable
 {
     _enable = enable;
-    
-    for (UIWindow *window in [UIApplication sharedApplication].windows) {
+    // UIScene：仅枚举 .windows 会漏掉仅挂在 scene 上的窗口；与层级调试等逻辑保持一致
+    NSMutableArray<UIWindow *> *all = [NSMutableArray array];
+    if (@available(iOS 13.0, *)) {
+        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if (![scene isKindOfClass:[UIWindowScene class]]) {
+                continue;
+            }
+            [all addObjectsFromArray:((UIWindowScene *)scene).windows];
+        }
+    }
+    for (UIWindow *w in [UIApplication sharedApplication].windows) {
+        if (![all containsObject:w]) {
+            [all addObject:w];
+        }
+    }
+    for (UIWindow *window in all) {
         [window doraemonMetricsRecursiveEnable:enable];
     }
 }

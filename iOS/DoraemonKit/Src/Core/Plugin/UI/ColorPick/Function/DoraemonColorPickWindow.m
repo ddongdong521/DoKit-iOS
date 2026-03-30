@@ -104,7 +104,10 @@ static CGFloat const kColorPickWindowSize = 150;
 
 - (void)updateScreeShotImage {
     UIGraphicsBeginImageContext([UIScreen mainScreen].bounds.size);
-    [[DoraemonUtil getKeyWindow].layer renderInContext:UIGraphicsGetCurrentContext()];
+    UIWindow *host = [DoraemonUtil hostKeyWindowForAppOverlay];
+    if (host) {
+        [host.layer renderInContext:UIGraphicsGetCurrentContext()];
+    }
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     

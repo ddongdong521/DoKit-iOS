@@ -58,13 +58,13 @@
 }
 
 + (UIViewController *)rootViewControllerForKeyWindow{
-    UIWindow *keyWindow = [DoraemonUtil getKeyWindow];
+    UIWindow *keyWindow = [DoraemonUtil hostKeyWindowForAppOverlay];
     return [keyWindow rootViewController];
 }
 
 + (UIViewController *)topViewControllerForKeyWindow {
     UIViewController *resultVC;
-    UIWindow *keyWindow = [DoraemonUtil getKeyWindow];
+    UIWindow *keyWindow = [DoraemonUtil hostKeyWindowForAppOverlay];
     resultVC = [self _topViewController:[keyWindow rootViewController]];
     while (resultVC.presentedViewController) {
         resultVC = [self _topViewController:resultVC.presentedViewController];

@@ -31,13 +31,13 @@
     self = [super init];
     if (self) {
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(closePlugin:) name:DoraemonClosePluginNotification object:nil];
-        [[DoraemonUtil getKeyWindow] addObserver:self forKeyPath:@"rootViewController" options:NSKeyValueObservingOptionNew context:nil];
+        [[DoraemonUtil hostKeyWindowForAppOverlay] addObserver:self forKeyPath:@"rootViewController" options:NSKeyValueObservingOptionNew context:nil];
     }
     return self;
 }
 
 - (void)dealloc {
-     [[DoraemonUtil getKeyWindow] removeObserver:self forKeyPath:@"rootViewController"];
+     [[DoraemonUtil hostKeyWindowForAppOverlay] removeObserver:self forKeyPath:@"rootViewController"];
 }
 
 - (void)show{
@@ -45,7 +45,7 @@
         _alignView = [[DoraemonViewAlignView alloc] init];
 //        _alignView.hidden = YES;
         [_alignView hide];
-        [[DoraemonUtil getKeyWindow] addSubview:_alignView];
+        [[DoraemonUtil hostKeyWindowForAppOverlay] addSubview:_alignView];
     }
 //    _alignView.hidden = NO;
     [_alignView show];
@@ -61,7 +61,7 @@
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
-    [[DoraemonUtil getKeyWindow] bringSubviewToFront:self.alignView];
+    [[DoraemonUtil hostKeyWindowForAppOverlay] bringSubviewToFront:self.alignView];
 }
 
 @end
